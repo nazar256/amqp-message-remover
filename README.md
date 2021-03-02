@@ -15,5 +15,5 @@ Installation
 Requires installed go 1.16 or later
 
 ```
-go install github.com/nazar256/amqp-message-remover
+go install github.com/nazar256/amqp-message-remover@latest
 ```

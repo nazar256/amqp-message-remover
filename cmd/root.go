@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/gosuri/uiprogress"
+	"github.com/nazar256/amqp-message-remover/remover"
 	"github.com/spf13/cobra"
-	"main/remover"
 	"os"
 	"os/signal"
 	"regexp"
