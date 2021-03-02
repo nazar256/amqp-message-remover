@@ -1,7 +1,5 @@
 module github.com/nazar256/amqp-message-remover
 
-replace github.com/nazar256/amqp-message-remover => ./
-
 go 1.16
 
 require (
