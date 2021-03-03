@@ -24,7 +24,7 @@ DSN - amqp url specification, default is amqp://guest:guest@127.0.0.1:5672
 	Short: "Removes messages from AMQP queue selectively by regexp",
 	Long: `Removes messages from AMQP queue selectively. Matches message body by default against regular expression.
 Only unacked messages can be processed. 
-If you have to process all your queue - prefetch count must be greater or equal than actual queue size.
+If you have to process all your queue - prefetch count must be equal to actual queue size.
 Alternatively you can run this command in parallel with your normal consumer. In this case this command will remove
 messages not consumed by another consumer.`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -91,7 +91,7 @@ func init() {
 		&prefetch,
 		"prefetch",
 		1,
-		"prefetch count, how many last messages to scan (or delete when 'continuous'); must not exceed actual queue size",
+		"prefetch count, how many last messages to scan (or delete when 'continuous'); should not exceed queue size",
 	)
 	_ = rootCmd.MarkFlagRequired("prefetch")
 
@@ -99,7 +99,7 @@ func init() {
 		&continuous,
 		"continuous",
 		false,
-		"use this flag when running along with regular consumer, this is the same as if you rerun command continuously",
+		"use this flag when running along with regular consumer, not deleted messages will be requeued continuously",
 	)
 
 	rootCmd.Flags().BoolVar(&nack, "nack", false, "use to unacknowledge messages, i.e. to send them to DLX")

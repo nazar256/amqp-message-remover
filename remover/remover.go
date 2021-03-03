@@ -7,13 +7,17 @@ import (
 	"regexp"
 )
 
+// MatchType indicates what will be matched with regexp
 type MatchType int
 
 const (
+	// MatchBody used for matching AMQP-message bodies with regexp
 	MatchBody MatchType = iota
+	// MatchHeaders used for matching message headers (pre-serialized as json)
 	MatchHeaders
 )
 
+// Config contains parameters for message deletion process
 type Config struct {
 	Dsn           string
 	QueueName     string
@@ -24,16 +28,19 @@ type Config struct {
 	Continuous    bool
 }
 
+// Status contains metrics about current deletion process
 type Status struct {
 	Processed int
 	Removed   int
 	Finished  bool
 }
 
+// StatusChannel read-only channel which provides Status updates
 type StatusChannel <-chan Status
 
 type msgChan <-chan amqp.Delivery
 
+// RemoveMessages will connect to AMQP broker and start removing messages by Config
 func RemoveMessages(config Config) StatusChannel {
 	messages := initConsumer(config.Dsn, config.QueueName, config.PrefetchCount)
 	statusCh := make(chan Status, 2)
