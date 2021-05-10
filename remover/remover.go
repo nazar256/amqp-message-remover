@@ -2,9 +2,10 @@ package remover
 
 import (
 	"encoding/json"
-	"github.com/streadway/amqp"
 	"log"
 	"regexp"
+
+	"github.com/streadway/amqp"
 )
 
 type MatchType int
@@ -14,14 +15,18 @@ const (
 	MatchHeaders
 )
 
+const (
+	statusChannelBuffer = 2
+)
+
 type Config struct {
+	Nack          bool
+	Continuous    bool
+	PrefetchCount uint16
 	Dsn           string
 	QueueName     string
 	Regexp        *regexp.Regexp
-	PrefetchCount int
-	Nack          bool
 	MatchType     MatchType
-	Continuous    bool
 }
 
 type Status struct {
@@ -36,7 +41,7 @@ type msgChan <-chan amqp.Delivery
 
 func RemoveMessages(config Config) StatusChannel {
 	messages := initConsumer(config.Dsn, config.QueueName, config.PrefetchCount)
-	statusCh := make(chan Status, 2)
+	statusCh := make(chan Status, statusChannelBuffer)
 	status := new(Status)
 
 	go func() {
@@ -47,18 +52,21 @@ func RemoveMessages(config Config) StatusChannel {
 			case MatchBody:
 				subject = m.Body
 			case MatchHeaders:
-				headersJson, err := json.Marshal(m.Headers)
+				headersJSON, err := json.Marshal(m.Headers)
 				failOnError(err, "Failed to stringify message headers")
-				subject = headersJson
+
+				subject = headersJSON
 			}
+
 			if config.Regexp.Match(subject) {
 				removeMessage(m, config.Nack)
-				status.Removed += 1
+				status.Removed++
 			} else if config.Continuous {
 				err := m.Nack(false, true)
 				failOnError(err, "Failed on returning not matched message to queue")
 			}
-			status.Processed += 1
+
+			status.Processed++
 			statusCh <- *status
 		}
 
@@ -70,24 +78,25 @@ func RemoveMessages(config Config) StatusChannel {
 	return statusCh
 }
 
-func removeMessage(m amqp.Delivery, isNack bool) {
+func removeMessage(m amqp.Delivery, isNack bool) { // nolint:gocritic
 	var err error
 	if isNack {
 		err = m.Nack(false, false)
 	} else {
 		err = m.Ack(false)
 	}
+
 	failOnError(err, "Failed to remove message")
 }
 
-func initConsumer(dsn string, queueName string, prefetch int) msgChan {
+func initConsumer(dsn, queueName string, prefetch uint16) msgChan {
 	conn, err := amqp.Dial(dsn)
 	failOnError(err, "Could not connect to rabbitmq with "+dsn)
 
 	ch, err := conn.Channel()
 	failOnError(err, "Could not create amqp channel")
 
-	err = ch.Qos(prefetch, 0, false)
+	err = ch.Qos(int(prefetch), 0, false)
 	failOnError(err, "Could not set prefetch")
 
 	consumerCh, err := ch.Consume(

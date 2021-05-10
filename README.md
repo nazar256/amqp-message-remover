@@ -1,7 +1,10 @@
 Amqp message remover
 ====================
 
-Will help you to remove bad messages from your queue which fail your consumer.
+Will help you to remove unwanted messages from your queue which fail your consumer.
+
+Disclaimer
+----------
 
 Current version should not be considered as stable, use at your own risk and responsibility.
 
@@ -14,7 +17,7 @@ Installation
 ------------
 
 ### From source (recommended)
-Requires installed go 1.16 or later
+Using go 1.16 or later:
 
 ```
 go install github.com/nazar256/amqp-message-remover@latest

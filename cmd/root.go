@@ -1,26 +1,34 @@
 package cmd
 
 import (
-	"fmt"
-	"github.com/gosuri/uiprogress"
-	"github.com/nazar256/amqp-message-remover/remover"
-	"github.com/spf13/cobra"
+	"log"
 	"os"
 	"os/signal"
 	"regexp"
+
+	"github.com/gosuri/uiprogress"
+	"github.com/nazar256/amqp-message-remover/remover"
+	"github.com/spf13/cobra"
 )
 
-var continuous bool
-var nack bool
-var prefetch int
-var matchHeaders bool
+const (
+	minArgLength = 2
+	maxArgLength = 3
+)
+
+var (
+	continuous   bool
+	nack         bool
+	prefetch     int
+	matchHeaders bool
+)
 
 var rootCmd = &cobra.Command{
 	Use: `amqp-message-remover [queue_name] [regex] [DSN] [options]
 regex - regular expression without delimiters (example: .*some-bad-value.*).
 DSN - amqp url specification, default is amqp://guest:guest@127.0.0.1:5672
 `,
-	Args:  cobra.RangeArgs(2, 3),
+	Args:  cobra.RangeArgs(minArgLength, maxArgLength),
 	Short: "Removes messages from AMQP queue selectively by regexp",
 	Long: `Removes messages from AMQP queue selectively. Matches message body by default against regular expression.
 Only unacked messages can be processed. 
@@ -29,7 +37,7 @@ Alternatively you can run this command in parallel with your normal consumer. In
 messages not consumed by another consumer.`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		dsn := "amqp://guest:guest@127.0.0.1:5672"
-		if len(args) >= 3 {
+		if len(args) >= maxArgLength {
 			dsn = args[2]
 		}
 
@@ -44,7 +52,7 @@ messages not consumed by another consumer.`,
 		config := remover.Config{
 			Dsn:           dsn,
 			QueueName:     args[0],
-			PrefetchCount: prefetch,
+			PrefetchCount: uint16(prefetch),
 			Regexp:        regexp.MustCompile(args[1]),
 			MatchType:     remover.MatchBody,
 			Continuous:    continuous,
@@ -83,7 +91,7 @@ messages not consumed by another consumer.`,
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
-	fmt.Println("done")
+	log.Println("done")
 }
 
 func init() {
@@ -91,8 +99,9 @@ func init() {
 		&prefetch,
 		"prefetch",
 		1,
-		"prefetch count, how many last messages to scan (or delete when 'continuous'); must not exceed actual queue size",
+		"prefetch count, how many last messages to scan (or minimum to delete when 'continuous');",
 	)
+
 	_ = rootCmd.MarkFlagRequired("prefetch")
 
 	rootCmd.Flags().BoolVar(
@@ -116,5 +125,6 @@ func makeBar() *uiprogress.Bar {
 	uiprogress.Start()
 	bar := uiprogress.AddBar(prefetch)
 	bar.AppendCompleted()
+
 	return bar
 }
